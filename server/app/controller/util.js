@@ -3,6 +3,7 @@
 const captcha = require('svg-captcha');
 const baseController = require('./base');
 const fse = require('fs-extra');
+const path = require('path');
 
 class UtilController extends baseController {
   async captcha() {
@@ -39,12 +40,14 @@ class UtilController extends baseController {
   async uploadfile() {
     const { ctx } = this;
     const file = ctx.request.files[0];
-    const { name } = ctx.request.body;
+    const { name, hash } = ctx.request.body;
     console.log(file, name);
-    await fse.move(file.filepath, this.config.UPLOAD_DIR + '/' + file.filename);
-    this.success({
-      url: `/public/${file.filename}`,
-    });
+    const chunkPath = path.resolve(this.config.UPLOAD_DIR, hash);
+    if (!fse.existsSync(chunkPath)) {
+      await fse.mkdir(chunkPath);
+    }
+    await fse.move(file.filepath, `${chunkPath}/${name}`);
+    this.message('切片上传成功');
   }
 }
 
