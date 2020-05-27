@@ -38,6 +38,7 @@ class UtilController extends baseController {
     }
   }
   async uploadfile() {
+    console.log(111);
     const { ctx } = this;
     const file = ctx.request.files[0];
     const { name, hash } = ctx.request.body;

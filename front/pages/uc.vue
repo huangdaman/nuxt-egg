@@ -189,22 +189,21 @@ export default {
     async uploadChunks (chunks) {
       const requests = chunks.map((chunk, index) => {
         const form = new FormData()
-        form.append('index', chunk.index)
         form.append('hash', chunk.hash)
         form.append('name', chunk.name)
-        form.append('file', chunk.chunk)
+        form.append('chunk', chunk.chunk)
         return form
       }).map((form, index) => {
-        this.$http({
-          url: '/uploadfile',
-          method: 'post',
-          data: form,
+        this.$http.post('/uploadfile', form, {
           onUploadProgress: (progess) => {
             this.chunks[index].progress = Number((progess.loaded / progess.total * 100).toFixed(2))
           }
         })
       })
       await Promise.all(requests)
+    },
+    async sendRequest() {
+      
     },
     handleruploadFile (e) {
       const [file] = e.target.files

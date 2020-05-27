@@ -3,7 +3,6 @@ import axios from 'axios'
 import { MessageBox } from 'element-ui'
 
 const instance = axios.create({
-  timeout: 8000,
   baseURL: '/api/'
 })
 
