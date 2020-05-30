@@ -28,7 +28,8 @@ export default {
       name: '',
       file: null,
       uploadProgress: 0,
-      hashProgress: 0
+      hashProgress: 0,
+      chunks: []
     }
   },
   mounted () {
@@ -172,16 +173,17 @@ export default {
       // }
       const chunks = this.createFileChunk(this.file)
       // const hash = await this.calculateHashWorker(chunks)
-      const hash = await this.calculateHashIdle(chunks)
-      console.log('文件的hash', hash)
+      this.hash = await this.calculateHashIdle(chunks)
+      console.log('文件的hash', this.hash)
 
       this.chunks = chunks.map((chunk, index) => {
-        const name = hash + '-' + index
+        const name = this.hash + '-' + index
         return {
-          hash,
+          hash: this.hash,
           name,
           index,
-          chunk: chunk.file
+          chunk: chunk.file,
+          progress: 0
         }
       })
       await this.uploadChunks(this.chunks)
@@ -192,18 +194,54 @@ export default {
         form.append('hash', chunk.hash)
         form.append('name', chunk.name)
         form.append('chunk', chunk.chunk)
-        return form
-      }).map((form, index) => {
-        this.$http.post('/uploadfile', form, {
-          onUploadProgress: (progess) => {
-            this.chunks[index].progress = Number((progess.loaded / progess.total * 100).toFixed(2))
-          }
-        })
+        const i = chunk.index
+        return { form, index: i }
       })
-      await Promise.all(requests)
+      // .map((form, index) => {
+      //   this.$http.post('/uploadfile', form, {
+      //     onUploadProgress: (progess) => {
+      //       this.chunks[index].progress = Number((progess.loaded / progess.total * 100).toFixed(2))
+      //     }
+      //   })
+      // })
+      // await Promise.all(requests)
+      await this.sendRequest(requests)
+      await this.mergeRequest()
     },
-    async sendRequest() {
-      
+    sendRequest (chunks, limit = 2) {
+      return new Promise((resolve, reject) => {
+        const len = chunks.length
+        let count = 0
+        const start = async () => {
+          const task = chunks.shift()
+          if (task) {
+            const { form, index } = task
+            await this.$http.post('/uploadfile', form, {
+              onUploadProgress: (progress) => {
+                this.chunks[index].progress = Number((progress.loaded / progress.total * 100).toFixed(2))
+              }
+            })
+          }
+
+          if (count === len - 1) {
+            resolve()
+          } else {
+            count++
+            start()
+          }
+        }
+        while (limit > 0) {
+          start()
+          limit -= 1
+        }
+      })
+    },
+    mergeRequest () {
+      this.$http.post('/merge', {
+        ext: this.file.name.split('.').pop(),
+        size: CHUNK_SIZE,
+        hash: this.hash
+      })
     },
     handleruploadFile (e) {
       const [file] = e.target.files

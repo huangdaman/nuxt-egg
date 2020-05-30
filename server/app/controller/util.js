@@ -38,17 +38,24 @@ class UtilController extends baseController {
     }
   }
   async uploadfile() {
-    console.log(111);
     const { ctx } = this;
     const file = ctx.request.files[0];
     const { name, hash } = ctx.request.body;
-    console.log(file, name);
     const chunkPath = path.resolve(this.config.UPLOAD_DIR, hash);
     if (!fse.existsSync(chunkPath)) {
       await fse.mkdir(chunkPath);
     }
     await fse.move(file.filepath, `${chunkPath}/${name}`);
     this.message('切片上传成功');
+  }
+  async mergefile() {
+    const { ext, size, hash } = this.ctx.request.body;
+    const filepath = path.resolve(this.config.UPLOAD_DIR, `${hash}.${ext}`);
+    await this.ctx.service.tools.mergeFile(filepath, hash, size);
+    this.success({
+      url: filepath,
+      message: '上传成功',
+    });
   }
 }
 
